@@ -1,0 +1,17 @@
+STRATEGY OVERVIEW:
+Send two children to Molokai whenever possible. If there is exactly one child on Molokai, send an adult to Molokai.
+
+If there are people still remaining on Oahu, a child rows back to Oahu.
+
+PROOF OF CORRECTNESS:
+To start, all children will row to Molokai. If there are adults remaining, then a child will row to Oahu, the adult will row to Molokai, another child will row to Oahu, and then both children will row back. Then we have the same situation again but with one less adult on Oahu. Continuing this process, eventually all adults will make it to Molokai as well.
+
+SYNCHRONIZATION:
+All synchronization is done using semaphores and a single lock. Several semaphores represent where the boat is and who should be boarding. Indiviudal threads wait for the semaphore applicable to them, and the first to decrement them claim their spot on the boat. Once the boat is dispatched, the rower if solo or the passenger if applicable is responsible for updating counters, incrementing the semaphore corresponding to the next phase, or declaring victory if there is nobody left on Oahu.
+
+The lock is used to protect the boolean variable OahuChildRowerSet, which is a race to determine which child is the rower and which is the passenger when travelling to Molokai as a pair.
+
+The global integer counters OahuAdults and OahuChildren are updated once per boat dispatch. Since boat dispatches happen sequentially, these variables are thread-safe.
+
+TEST CASES:
+Test cases are enumerated for adults in the interval [0,19] and children in the interval [2,19]. The procedure will deadlock for initial children less than two, but this is outside the specification.

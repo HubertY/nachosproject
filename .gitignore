@@ -1,0 +1,8 @@
+proj1/nachos/*/*
+proj2/nachos/*/*
+proj3/nachos/*/*
+proj4/nachos/*/*
+test/strt.s
+test/*.o
+test/*.coff
+test/libnachos.a

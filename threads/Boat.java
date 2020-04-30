@@ -1,76 +1,109 @@
 package nachos.threads;
+
 import nachos.ag.BoatGrader;
 
-public class Boat
-{
-    static BoatGrader bg;
-    
-    public static void selfTest()
-    {
-	BoatGrader b = new BoatGrader();
-	
-	System.out.println("\n ***Testing Boats with only 2 children***");
-	begin(0, 2, b);
+public class Boat {
+	static BoatGrader bg;
 
-//	System.out.println("\n ***Testing Boats with 2 children, 1 adult***");
-//  	begin(1, 2, b);
+	static int OahuAdults;
+	static int OahuChildren;
 
-//  	System.out.println("\n ***Testing Boats with 3 children, 3 adults***");
-//  	begin(3, 3, b);
-    }
+	static Semaphore OahuAdultBoatReady;
+	static Semaphore OahuChildBoatReady;
+	static Semaphore MoloBoatReady;
 
-    public static void begin( int adults, int children, BoatGrader b )
-    {
-	// Store the externally generated autograder in a class
-	// variable to be accessible by children.
-	bg = b;
+	static boolean OahuChildRowerSet;
+	static Lock OahuChildRowerLock;
 
-	// Instantiate global variables here
-	
-	// Create threads here. See section 3.4 of the Nachos for Java
-	// Walkthrough linked from the projects page.
+	static Semaphore VictoryDeclared;
 
-	Runnable r = new Runnable() {
-	    public void run() {
-                SampleItinerary();
-            }
-        };
-        KThread t = new KThread(r);
-        t.setName("Sample Boat Thread");
-        t.fork();
+	public static void selfTest() {
+		for (int children = 2; children < 20; children++) {
+			BoatGrader b = new BoatGrader();
+			for (int adults = 0; adults < 20; adults++) {
+				System.out.println("Testing Boat with " + adults + " adults and " + children + " children.");
+				begin(adults, children, b);
+			}
+		}
+	}
 
-    }
+	public static void begin(int adults, int children, BoatGrader b) {
+		// Store the externally generated autograder in a class
+		// variable to be accessible by children.
+		bg = b;
 
-    static void AdultItinerary()
-    {
-	bg.initializeAdult(); //Required for autograder interface. Must be the first thing called.
-	//DO NOT PUT ANYTHING ABOVE THIS LINE. 
+		OahuAdults = adults;
+		OahuChildren = children;
 
-	/* This is where you should put your solutions. Make calls
-	   to the BoatGrader to show that it is synchronized. For
-	   example:
-	       bg.AdultRowToMolokai();
-	   indicates that an adult has rowed the boat across to Molokai
-	*/
-    }
+		OahuAdultBoatReady = new Semaphore(0);
+		OahuChildBoatReady = new Semaphore(2);
+		MoloBoatReady = new Semaphore(0);
 
-    static void ChildItinerary()
-    {
-	bg.initializeChild(); //Required for autograder interface. Must be the first thing called.
-	//DO NOT PUT ANYTHING ABOVE THIS LINE. 
-    }
+		OahuChildRowerSet = false;
+		OahuChildRowerLock = new Lock();
 
-    static void SampleItinerary()
-    {
-	// Please note that this isn't a valid solution (you can't fit
-	// all of them on the boat). Please also note that you may not
-	// have a single thread calculate a solution and then just play
-	// it back at the autograder -- you will be caught.
-	System.out.println("\n ***Everyone piles on the boat and goes to Molokai***");
-	bg.AdultRowToMolokai();
-	bg.ChildRideToMolokai();
-	bg.AdultRideToMolokai();
-	bg.ChildRideToMolokai();
-    }
-    
+		VictoryDeclared = new Semaphore(0);
+
+		for (int i = 0; i < children; i++) {
+			new KThread(new Runnable() {
+				public void run() {
+					ChildItinerary();
+				}
+			}).setName("c" + i).fork();
+		}
+
+		for (int i = 0; i < adults; i++) {
+			new KThread(new Runnable() {
+				public void run() {
+					AdultItinerary();
+				}
+			}).setName("a" + i).fork();
+		}
+
+		VictoryDeclared.P();
+	}
+
+	static void AdultItinerary() {
+		bg.initializeAdult(); // Required for autograder interface. Must be the first thing called.
+		// DO NOT PUT ANYTHING ABOVE THIS LINE.
+
+		OahuAdultBoatReady.P();
+		OahuAdults--;
+		bg.AdultRowToMolokai();
+		MoloBoatReady.V();
+	}
+
+	static void ChildItinerary() {
+		bg.initializeChild(); // Required for autograder interface. Must be the first thing called.
+		// DO NOT PUT ANYTHING ABOVE THIS LINE.
+		while (true) {
+			OahuChildBoatReady.P();
+			OahuChildRowerLock.acquire();
+			boolean captain = !OahuChildRowerSet;
+			OahuChildRowerSet = !OahuChildRowerSet;
+			if (captain) {
+				bg.ChildRowToMolokai();
+				OahuChildRowerLock.release();
+			} else {
+				OahuChildRowerLock.release();
+				OahuChildren -= 2;
+				boolean done = (OahuAdults == 0 && OahuChildren == 0);
+				bg.ChildRideToMolokai();
+				if (done) {
+					VictoryDeclared.V();
+				} else {
+					MoloBoatReady.V();
+				}
+			}
+			MoloBoatReady.P();
+			bg.ChildRowToOahu();
+			OahuChildren++;
+			if (OahuChildren >= 2) {
+				OahuChildBoatReady.V();
+				OahuChildBoatReady.V();
+			} else {
+				OahuAdultBoatReady.V();
+			}
+		}
+	}
 }

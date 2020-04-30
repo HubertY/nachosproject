@@ -16,5 +16,16 @@ int
 main()
 {
     halt();
-    /* not reached */
+    printf("hallo");
+    printf("hallo");
+    printf("hallo");
+    printf("hallo");
+    printf("hallo");
+    printf("hallo");
+    printf("hallo");
+    printf("hallo");
+    printf("hallo");
+    printf("hallo");
+
+    return 0;
 }

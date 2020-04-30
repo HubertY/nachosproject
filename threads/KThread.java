@@ -164,7 +164,6 @@ public class KThread {
     private void runThread() {
         begin();
         target.run();
-        finishedExecuting.V();
         finish();
     }
 
@@ -189,6 +188,8 @@ public class KThread {
      * this thread.
      */
     public static void finish() {
+        currentThread.finishedExecuting.V();
+
         Lib.debug(dbgThread, "Finishing thread: " + currentThread.toString());
 
         Machine.interrupt().disable();
